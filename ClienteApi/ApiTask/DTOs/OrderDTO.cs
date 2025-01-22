@@ -1,6 +1,6 @@
 ﻿namespace ApiTask.DTOs
 {
-    public class PedidoDto
+    public class OrderDTO
     {
         public string Id { get; set; }
         public string OrderId { get; set; }

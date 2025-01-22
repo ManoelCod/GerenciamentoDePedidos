@@ -10,7 +10,7 @@ namespace TaskManagement.Application
     public class PedidoApplication
     {
         private readonly PedidoService _pedidoService;
-
+        private readonly PedidoService OrderService;
         public PedidoApplication(PedidoService pedidoService)
         {
             _pedidoService = pedidoService;
@@ -30,6 +30,16 @@ namespace TaskManagement.Application
         public decimal CalcularValorTotalPedido(Guid pedidoId)
         {
             return _pedidoService.CalcularValorTotalPedido(pedidoId);
+        }
+
+        public async Task<bool> UpdateOrderAsync(Guid id, Domain.Models.Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task GetAllOrdersAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 
