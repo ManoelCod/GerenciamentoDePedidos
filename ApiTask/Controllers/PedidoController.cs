@@ -16,11 +16,18 @@ namespace ApiTask.Controllers
             _pedidoApplication = pedidoApplication;
         }
 
-        [HttpPost]
-        public IActionResult CriarPedido([FromBody] string nomeCliente)
+
+        [HttpPost("create")]
+        public IActionResult CreatePedido([FromBody] PedidoDto pedido)
         {
-            var pedido = _pedidoApplication.CriarPedido(nomeCliente);
-            return Ok(pedido);
+            if (pedido == null)
+            {
+                return BadRequest("Pedido não pode ser nulo.");
+            }
+            // Processar o pedido aqui
+            //  var pedido = _pedidoApplication.CriarPedido(nomeCliente);
+
+            return Ok(new { mensagem = "Pedido criado com sucesso!" });
         }
 
         [HttpPost("{pedidoId}/itens")]
