@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application;
 using TaskManagement.Application.Service;
+using TaskManagement.Application.Service.Interface;
 using TaskManagement.Application.Services;
 using TaskManagement.Domain.IRepositoreis;
 using TaskManagement.Domain.IRepositories;
@@ -12,11 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<TaskDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); 
-builder.Services.AddScoped<ITaskRepository, EfTaskRepository>(); 
-builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
-builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<IPedidoService,PedidoService>();
 builder.Services.AddScoped<PedidoApplication>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

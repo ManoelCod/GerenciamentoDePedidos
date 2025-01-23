@@ -1,38 +1,67 @@
 ﻿using TaskManagement.Domain.IRepositoreis;
 
-namespace TaskManagement.Application.Service
+public class PedidoService : IPedidoService
 {
-    public class PedidoService
+    private readonly IPedidoRepository _pedidoRepository;
+
+    public PedidoService(IPedidoRepository pedidoRepository)
     {
-        private readonly IPedidoRepository _pedidoRepository;
+        _pedidoRepository = pedidoRepository ?? throw new ArgumentNullException(nameof(pedidoRepository));
+    }
 
-        public PedidoService(IPedidoRepository pedidoRepository)
+    public async Task<Pedido> CriarPedidoAsync(Pedido pedido)
+    {
+        // Lógica para criar pedido
+        await _pedidoRepository.AdicionarAsync(pedido);
+        return pedido;
+    }
+
+    public async Task<Pedido> ObterPorIdAsync(Guid id)
+    {
+        return await _pedidoRepository.ObterPorIdAsync(id);
+    }
+
+    public async Task<IEnumerable<Pedido>> ObterTodosAsync()
+    {
+        return await _pedidoRepository.ObterTodosAsync();
+    }
+
+    public async Task<Pedido> AdicionarAsync(Pedido pedido)
+    {
+        await _pedidoRepository.AdicionarAsync(pedido);
+        return pedido;
+    }
+
+    public async Task AtualizarAsync(Pedido pedido)
+    {
+        await _pedidoRepository.AtualizarAsync(pedido);
+    }
+
+    public async Task RemoverAsync(Guid id)
+    {
+        await _pedidoRepository.RemoverAsync(id);
+    }
+
+    public async Task<IEnumerable<Pedido>> FiltrarPedidosAsync(DateTime? dataInicio, DateTime? dataFim, string nomeCliente)
+    {
+        var pedidos = await _pedidoRepository.ObterTodosAsync();
+
+        if (dataInicio.HasValue)
         {
-            _pedidoRepository = pedidoRepository;
+            pedidos = pedidos.Where(pedido => pedido.DataPedido >= dataInicio.Value);
         }
 
-        public Pedido CriarPedido(string nomeCliente, DateTime dataPedido)
+        if (dataFim.HasValue)
         {
-            var pedido = new Pedido(Guid.NewGuid(), nomeCliente, dataPedido);
-            _pedidoRepository.Adicionar(pedido);
-            return pedido;
+            pedidos = pedidos.Where(pedido => pedido.DataPedido <= dataFim.Value);
         }
 
-        public void AdicionarItemAoPedido(Guid pedidoId, ItemPedido item)
+        if (!string.IsNullOrEmpty(nomeCliente))
         {
-            var pedido = _pedidoRepository.ObterPorId(pedidoId);
-            if (pedido != null)
-            {
-                pedido.AdicionarItem(item);
-                _pedidoRepository.Atualizar(pedido);
-            }
+            pedidos = pedidos.Where(pedido => pedido.NomeCliente.Contains(nomeCliente, StringComparison.OrdinalIgnoreCase));
         }
 
-        public decimal CalcularValorTotalPedido(Guid pedidoId)
-        {
-            var pedido = _pedidoRepository.ObterPorId(pedidoId);
-            return pedido?.ValorTotal ?? 0;
-        }
+        return pedidos;
     }
 
 }

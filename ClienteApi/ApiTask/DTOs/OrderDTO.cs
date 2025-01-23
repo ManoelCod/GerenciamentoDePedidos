@@ -3,6 +3,7 @@
     public class OrderDTO
     {
         public string Id { get; set; }
+        public string name { get; set; }
         public string OrderId { get; set; }
         public string Carts { get; set; }
         public decimal Amount { get; set; }

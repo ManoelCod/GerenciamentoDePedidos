@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace TaskManagement.Application.Service.Interface
+public interface IPedidoService
 {
-    public interface IPedidoService
-    {
-        Task<IEnumerable<Pedido>> GetAllPedidosAsync();
-        Task<Pedido> GetPedidoByIdAsync(Guid id);
-        Task CreatePedidoAsync(Pedido pedido);
-        Task<bool> UpdatePedidoAsync(Guid id, Pedido pedido);
-        Task<bool> DeletePedidoAsync(Guid id);
-    }
+    Task<Pedido> CriarPedidoAsync(Pedido pedido);
+    Task<Pedido> ObterPorIdAsync(Guid id);
+    Task<IEnumerable<Pedido>> ObterTodosAsync();
+    Task<Pedido> AdicionarAsync(Pedido pedido);
+    Task AtualizarAsync(Pedido pedido);
+    Task RemoverAsync(Guid id);
+    Task<IEnumerable<Pedido>> FiltrarPedidosAsync(DateTime? dataInicio, DateTime? dataFim, string nomeCliente);    
 }

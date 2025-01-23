@@ -12,12 +12,11 @@ namespace TaskManagement.Application.Service
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
-
+         
         public OrderService(IOrderRepository orderRepository)
         {
             _orderRepository = orderRepository;
-        }
-
+        } 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync()
         {
             return await _orderRepository.GetAllAsync();

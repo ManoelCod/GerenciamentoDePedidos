@@ -201,6 +201,7 @@ export class PosComponent implements OnInit {
       orderId: this.afs.createId(),
       carts: JSON.stringify(basket),
       amount: this.cartTotal,
+      name: 'Poliana',
       status: true,
       CreatedAt: moment().format(), 
       UpdatedAt: moment().format()     

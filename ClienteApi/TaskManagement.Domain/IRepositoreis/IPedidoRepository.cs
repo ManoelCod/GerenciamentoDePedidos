@@ -8,10 +8,11 @@ namespace TaskManagement.Domain.IRepositoreis
 {
     public interface IPedidoRepository
     {
-        Pedido ObterPorId(Guid id);
-        void Adicionar(Pedido pedido);
-        void Atualizar(Pedido pedido);
-        void Remover(Guid id);
-    }
+        Task<IEnumerable<Pedido>> ObterTodosAsync();
+        Task<Pedido> ObterPorIdAsync(Guid id);
+        Task AdicionarAsync(Pedido pedido);
+        Task AtualizarAsync(Pedido pedido);
+        Task<bool> RemoverAsync(Guid id);
 
+    }
 }

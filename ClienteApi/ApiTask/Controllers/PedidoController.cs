@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using ApiTask.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,14 +16,25 @@ namespace ApiTask.Controllers
     {
         private readonly PedidoApplication _pedidoApplication;
         private readonly IOrderService _orderService;
-        public OrderController(PedidoApplication pedidoApplication)
+        private JsonSerializerOptions options;
+
+        public OrderController(PedidoApplication pedidoApplication, IOrderService orderService)
         {
             _pedidoApplication = pedidoApplication;
+            options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                    new CustomDecimalConverter()
+                }
+            };
+            _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
         }
 
-
         [HttpPost("create")]
-        public IActionResult CreatePedido([FromBody] OrderDTO orderDTO)
+        public async Task<IActionResult> CreatePedidoAsync([FromBody] OrderDTO orderDTO)
         {
             if (orderDTO == null)
             {
@@ -30,97 +42,145 @@ namespace ApiTask.Controllers
             }
 
             var pedido = new Pedido(
-                      Guid.NewGuid(),
-                     orderDTO.OrderId,
-                     DateTime.UtcNow
-                      );
+                Guid.NewGuid(),
+                orderDTO.name,
+                DateTime.UtcNow
+            );
 
-            // Deserializar a string JSON `Carts` em uma lista de `ItemPedido`
-            var itemsDto = JsonSerializer.Deserialize<List<ItemOrderDto>>(orderDTO.Carts);
-            
-            if (itemsDto != null)
+            // Deserializar a string JSON `Carts` em uma lista de `ItemOrderDto`
+            var itemsDto = JsonSerializer.Deserialize<List<ItemOrderDto>>(orderDTO.Carts, options);
+
+            if (itemsDto == null || itemsDto.Count == 0)
             {
-                foreach (var itemDto in itemsDto)
-                {
-                  var item = new ItemPedido(
-                    pedido.Id,
+                return BadRequest("Items are null or empty");
+            }
+
+            foreach (var itemDto in itemsDto)
+            {
+                var item = new ItemPedido(
+                    Guid.NewGuid(), // Gerar novo Guid para o ItemPedido
                     itemDto.Name,
                     itemDto.Quantity,
                     itemDto.Price
-                     );
-                    pedido.AdicionarItem(item);
-                }
+                );
+                pedido.AdicionarItem(item);
             }
 
             // Processar o pedido aqui
-            //  var pedido = _pedidoApplication.CriarPedido(nomeCliente);
+            await _pedidoApplication.CriarPedidoAsync(pedido);
 
             return Ok(new { mensagem = "Pedido criado com sucesso!" });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] OrderDTO orderDto)
+        public async Task<IActionResult> UpdateOrderAsync(Guid id, [FromBody] OrderDTO orderDto)
         {
-            if (id.ToString() != orderDto.Id)
+            if (orderDto == null || id.ToString() != orderDto.Id)
             {
-                return BadRequest();
+                return BadRequest("Pedido não pode ser nulo e o ID deve coincidir.");
             }
 
-            var order = new Order(
-                id,
-                orderDto.OrderId,
-                orderDto.Amount,
-                orderDto.Status,
-                DateTime.Parse(orderDto.CreatedAt),
-                DateTime.Parse(orderDto.UpdatedAt)
-            );
-
-
-            var updated = await _pedidoApplication.UpdateOrderAsync(id, order);
-            if (!updated)
+            var pedidoExistente = await _pedidoApplication.ObterPedidoPorIdAsync(id);
+            if (pedidoExistente == null)
             {
-                return NotFound();
+                return NotFound("Pedido não encontrado.");
             }
 
-            return NoContent();
+            pedidoExistente.NomeCliente = orderDto.name;
+            pedidoExistente.DataPedido = DateTime.UtcNow;
+
+            // Deserializar a string JSON `Carts` em uma lista de `ItemOrderDto`
+            var itemsDto = JsonSerializer.Deserialize<List<ItemOrderDto>>(orderDto.Carts, options);
+
+            if (itemsDto == null || itemsDto.Count == 0)
+            {
+                return BadRequest("Items are null or empty");
+            }
+
+            pedidoExistente.Itens.Clear();
+            foreach (var itemDto in itemsDto)
+            {
+                var item = new ItemPedido(
+                    Guid.NewGuid(), // Gerar novo Guid para o ItemPedido
+                    itemDto.Name,
+                    itemDto.Quantity,
+                    itemDto.Price
+                );
+                pedidoExistente.AdicionarItem(item);
+            }
+
+            await _pedidoApplication.AtualizarPedidoAsync(pedidoExistente);
+
+            return Ok(new { mensagem = "Pedido atualizado com sucesso!" });
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteOrder(Guid id)
+        public async Task<IActionResult> DeleteOrderAsync(Guid id)
         {
-            var deleted = await _orderService.DeleteOrderAsync(id);
-            if (!deleted)
+            var pedidoExistente = await _pedidoApplication.ObterPedidoPorIdAsync(id);
+            if (pedidoExistente == null)
             {
-                return NotFound();
+                return NotFound("Pedido não encontrado.");
             }
 
-            return NoContent();
+            await _pedidoApplication.RemoverPedidoAsync(id);
+
+            return Ok(new { mensagem = "Pedido removido com sucesso!" });
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Order>> GetOrderById(Guid id)
+        public async Task<ActionResult<Pedido>> GetOrderByIdAsync(Guid id)
         {
-            var order = await _orderService.GetOrderByIdAsync(id);
-            if (order == null)
+            var orders = await _pedidoApplication.ObterPedidoPorIdAsync(id);
+            if (orders == null)
             {
                 return NotFound();
             }
-            return Ok(order);
+            return Ok(orders);
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Order>>> GetAllOrders()
+        [HttpGet("getAllOrders")]
+        public async Task<ActionResult<IEnumerable<Pedido>>> GetAllOrdersAsync()
         {
-            var orders = await _orderService.GetAllOrdersAsync();
-            return Ok(orders);
-
+            try
+            {
+                var orders = await _pedidoApplication.ObterTodosPedidosAsync();
+                if (orders == null || !orders.Any())
+                {
+                    return NotFound("No orders found.");
+                }
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpGet("{pedidoId}/valorTotal")]
-        public IActionResult CalcularValorTotal(Guid pedidoId)
+        public async Task<IActionResult> CalcularValorTotalAsync(Guid pedidoId)
         {
-            var valorTotal = _pedidoApplication.CalcularValorTotalPedido(pedidoId);
+            var valorTotal = await _pedidoApplication.CalcularValorTotalPedidoAsync(pedidoId);
             return Ok(valorTotal);
         }
+
+        [HttpGet("filtrar")]
+        public async Task<ActionResult<IEnumerable<Pedido>>> FiltrarPedidosAsync([FromQuery] DateTime? dataInicio, [FromQuery] DateTime? dataFim, [FromQuery] string nomeCliente)
+        {
+            if (!dataInicio.HasValue && !dataFim.HasValue && string.IsNullOrEmpty(nomeCliente))
+            {
+                return BadRequest("Por favor, forneça pelo menos um parâmetro de filtro (dataInicio, dataFim ou nomeCliente).");
+            }
+
+            var pedidosFiltrados = await _pedidoApplication.FiltrarPedidosAsync(dataInicio, dataFim, nomeCliente);
+            if (pedidosFiltrados == null || !pedidosFiltrados.Any())
+            {
+                return NotFound("Nenhum pedido encontrado com os critérios fornecidos.");
+            }
+
+            return Ok(pedidosFiltrados);
+        }
+
+
     }
 }

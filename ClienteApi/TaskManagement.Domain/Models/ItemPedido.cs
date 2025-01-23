@@ -18,9 +18,9 @@
 
 public class Pedido
 {
-    public Guid Id { get; private set; }
-    public string NomeCliente { get; private set; }
-    public DateTime DataPedido { get; private set; }
+    public Guid Id { get;  set; }
+    public string NomeCliente { get;  set; }
+    public DateTime DataPedido { get;  set; }
     public List<ItemPedido> Itens { get; private set; }
 
     public Pedido(Guid id, string nomeCliente, DateTime dataPedido)

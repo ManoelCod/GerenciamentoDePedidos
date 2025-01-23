@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using TaskManagement.Application.Service;
 
@@ -9,38 +7,49 @@ namespace TaskManagement.Application
 {
     public class PedidoApplication
     {
-        private readonly PedidoService _pedidoService;
-        private readonly PedidoService OrderService;
-        public PedidoApplication(PedidoService pedidoService)
+        private readonly IPedidoService _pedidoService;
+
+        public PedidoApplication(IPedidoService pedidoService)
         {
             _pedidoService = pedidoService;
         }
 
-        public Pedido CriarPedido(string nomeCliente)
+        public async Task<Pedido> CriarPedidoAsync(Pedido pedido)
         {
-            return _pedidoService.CriarPedido(nomeCliente, DateTime.Now);
+            return await _pedidoService.CriarPedidoAsync(pedido);
         }
 
-        public void AdicionarItemAoPedido(Guid pedidoId, string nomeItem, int quantidade, decimal valorUnitario)
+        public async Task<decimal> CalcularValorTotalPedidoAsync(Guid pedidoId)
         {
-            var item = new ItemPedido(Guid.NewGuid(), nomeItem, quantidade, valorUnitario);
-            _pedidoService.AdicionarItemAoPedido(pedidoId, item);
+            var pedido = await _pedidoService.ObterPorIdAsync(pedidoId);
+            return pedido?.ValorTotal ?? 0;
         }
 
-        public decimal CalcularValorTotalPedido(Guid pedidoId)
+        public async Task<Pedido> ObterPedidoPorIdAsync(Guid id)
         {
-            return _pedidoService.CalcularValorTotalPedido(pedidoId);
+            return await _pedidoService.ObterPorIdAsync(id);
         }
 
-        public async Task<bool> UpdateOrderAsync(Guid id, Domain.Models.Order order)
+        public async Task<IEnumerable<Pedido>> ObterTodosPedidosAsync()
         {
-            throw new NotImplementedException();
+            return await _pedidoService.ObterTodosAsync();
         }
 
-        public async Task GetAllOrdersAsync()
+        public async Task AtualizarPedidoAsync(Pedido pedido)
         {
-            throw new NotImplementedException();
+            await _pedidoService.AtualizarAsync(pedido);
+        }
+
+        public async Task RemoverPedidoAsync(Guid id)
+        {
+            await _pedidoService.RemoverAsync(id);
+        }
+
+        public async Task<IEnumerable<Pedido>> FiltrarPedidosAsync(DateTime? dataInicio, DateTime? dataFim, string nomeCliente)
+        {
+            return await _pedidoService.FiltrarPedidosAsync(dataInicio, dataFim, nomeCliente);
         }
     }
 
 }
+
