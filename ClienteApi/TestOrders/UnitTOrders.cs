@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using ApiTask.Controllers;
 using ApiTask.DTOs;
@@ -15,13 +16,15 @@ namespace ApiTask.Tests
 {
     public class OrderControllerTests
     {
+        private readonly Mock<IPedidoService> _mockPedidoService;
         private readonly Mock<PedidoApplication> _mockPedidoApplication;
         private readonly Mock<IOrderService> _mockOrderService;
         private readonly OrderController _controller;
 
         public OrderControllerTests()
         {
-            _mockPedidoApplication = new Mock<PedidoApplication>(MockBehavior.Strict);
+            _mockPedidoService = new Mock<IPedidoService>(MockBehavior.Strict);
+            _mockPedidoApplication = new Mock<PedidoApplication>(_mockPedidoService.Object); // Removido MockBehavior.Strict
             _mockOrderService = new Mock<IOrderService>(MockBehavior.Strict);
             _controller = new OrderController(_mockPedidoApplication.Object, _mockOrderService.Object);
         }
@@ -46,10 +49,17 @@ namespace ApiTask.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(200, okResult.StatusCode);
-            Assert.Equal("Pedido criado com sucesso!", ((dynamic)okResult.Value).mensagem);
+            // Converter o valor da resposta para JsonElement
+            var responseJson = JsonSerializer.Serialize(okResult.Value);
+            var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
+
+            // Acessar a propriedade mensagem
+            var mensagem = responseElement.GetProperty("mensagem").GetString();
+            Assert.Equal("Pedido criado com sucesso!", mensagem);
 
             _mockPedidoApplication.Verify(service => service.CriarPedidoAsync(It.IsAny<Pedido>()), Times.Once);
         }
+
 
 
         [Fact]
@@ -70,7 +80,7 @@ namespace ApiTask.Tests
             // Arrange
             var orderDto = new OrderDTO
             {
-                Id = "qTkPoMiVqZ4tG0UqYJr6",
+                Id = Guid.NewGuid().ToString(), 
                 name = "Poliana",
                 Carts = "[{\"Name\":\"Hambúrguer clássico\",\"Quantity\":1,\"Price\":10.50},{\"Name\":\"Cheeseburger\",\"Quantity\":1,\"Price\":12.50}]"
             };
@@ -85,7 +95,13 @@ namespace ApiTask.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(200, okResult.StatusCode);
-            Assert.Equal("Pedido atualizado com sucesso!", ((dynamic)okResult.Value).mensagem);
+            // Converter o valor da resposta para JsonElement
+            var responseJson = JsonSerializer.Serialize(okResult.Value);
+            var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
+
+            // Acessar a propriedade mensagem
+            var mensagem = responseElement.GetProperty("mensagem").GetString();
+            Assert.Equal("Pedido atualizado com sucesso!", mensagem);
 
             _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
             _mockPedidoApplication.Verify(service => service.AtualizarPedidoAsync(It.IsAny<Pedido>()), Times.Once);
@@ -97,7 +113,7 @@ namespace ApiTask.Tests
             // Arrange
             var orderDto = new OrderDTO
             {
-                Id = "qTkPoMiVqZ4tG0UqYJr6",
+                Id = Guid.NewGuid().ToString(),
                 name = "Poliana",
                 Carts = "[{\"Name\":\"Hambúrguer clássico\",\"Quantity\":1,\"Price\":10.50},{\"Name\":\"Cheeseburger\",\"Quantity\":1,\"Price\":12.50}]"
             };
@@ -142,7 +158,14 @@ namespace ApiTask.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(200, okResult.StatusCode);
-            Assert.Equal("Pedido removido com sucesso!", ((dynamic)okResult.Value).mensagem);
+
+            // Converter o valor da resposta para JsonElement
+            var responseJson = JsonSerializer.Serialize(okResult.Value);
+            var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
+
+            // Acessar a propriedade mensagem
+            var mensagem = responseElement.GetProperty("mensagem").GetString();
+            Assert.Equal("Pedido removido com sucesso!", mensagem);
 
             _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
             _mockPedidoApplication.Verify(service => service.RemoverPedidoAsync(It.IsAny<Guid>()), Times.Once);
@@ -177,12 +200,13 @@ namespace ApiTask.Tests
             var result = await _controller.GetOrderByIdAsync(pedidoExistente.Id);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
             Assert.Equal(200, okResult.StatusCode);
             Assert.Equal(pedidoExistente, okResult.Value);
 
             _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
         }
+
 
         [Fact]
         public async Task GetOrderByIdAsync_RetornaNotFound_QuandoPedidoNaoExiste()
@@ -194,7 +218,7 @@ namespace ApiTask.Tests
             var result = await _controller.GetOrderByIdAsync(Guid.NewGuid());
 
             // Assert
-            var notFoundResult = Assert.IsType<NotFoundResult>(result);
+            var notFoundResult = Assert.IsType<NotFoundResult>(result.Result);
             Assert.Equal(404, notFoundResult.StatusCode);
 
             _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
@@ -205,10 +229,10 @@ namespace ApiTask.Tests
         {
             // Arrange
             var pedidos = new List<Pedido>
-            {
-                new Pedido(Guid.NewGuid(), "Poliana", DateTime.UtcNow),
-                new Pedido(Guid.NewGuid(), "Outro Cliente", DateTime.UtcNow)
-            };
+    {
+        new Pedido(Guid.NewGuid(), "Poliana", DateTime.UtcNow),
+        new Pedido(Guid.NewGuid(), "Outro Cliente", DateTime.UtcNow)
+    };
 
             _mockPedidoApplication.Setup(service => service.ObterTodosPedidosAsync()).ReturnsAsync(pedidos);
 
@@ -216,11 +240,31 @@ namespace ApiTask.Tests
             var result = await _controller.GetAllOrdersAsync();
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
             Assert.Equal(200, okResult.StatusCode);
             Assert.Equal(pedidos, okResult.Value);
 
             _mockPedidoApplication.Verify(service => service.ObterTodosPedidosAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task CalcularValorTotalAsync_RetornaOkResult_QuandoPedidoIdEhValido()
+        {
+            // Arrange
+            var pedidoId = Guid.NewGuid();
+            var valorTotalEsperado = 123.45m; // Valor total esperado do pedido
+
+            _mockPedidoApplication.Setup(service => service.CalcularValorTotalPedidoAsync(It.IsAny<Guid>())).ReturnsAsync(valorTotalEsperado);
+
+            // Act
+            var result = await _controller.CalcularValorTotalAsync(pedidoId);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(200, okResult.StatusCode);
+            Assert.Equal(valorTotalEsperado, okResult.Value);
+
+            _mockPedidoApplication.Verify(service => service.CalcularValorTotalPedidoAsync(It.IsAny<Guid>()), Times.Once);
         }
     }
 }

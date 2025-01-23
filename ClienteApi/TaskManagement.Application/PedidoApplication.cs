@@ -14,38 +14,39 @@ namespace TaskManagement.Application
             _pedidoService = pedidoService;
         }
 
-        public async Task<Pedido> CriarPedidoAsync(Pedido pedido)
+
+        public virtual async Task<Pedido> CriarPedidoAsync(Pedido pedido)
         {
             return await _pedidoService.CriarPedidoAsync(pedido);
         }
 
-        public async Task<decimal> CalcularValorTotalPedidoAsync(Guid pedidoId)
+        public virtual async Task<decimal> CalcularValorTotalPedidoAsync(Guid pedidoId)
         {
             var pedido = await _pedidoService.ObterPorIdAsync(pedidoId);
             return pedido?.ValorTotal ?? 0;
         }
 
-        public async Task<Pedido> ObterPedidoPorIdAsync(Guid id)
+        public virtual async Task<Pedido> ObterPedidoPorIdAsync(Guid id)
         {
             return await _pedidoService.ObterPorIdAsync(id);
         }
 
-        public async Task<IEnumerable<Pedido>> ObterTodosPedidosAsync()
+        public virtual async Task<IEnumerable<Pedido>> ObterTodosPedidosAsync()
         {
             return await _pedidoService.ObterTodosAsync();
         }
 
-        public async Task AtualizarPedidoAsync(Pedido pedido)
+        public virtual async Task AtualizarPedidoAsync(Pedido pedido)
         {
             await _pedidoService.AtualizarAsync(pedido);
         }
 
-        public async Task RemoverPedidoAsync(Guid id)
+        public virtual async Task RemoverPedidoAsync(Guid id)
         {
             await _pedidoService.RemoverAsync(id);
         }
 
-        public async Task<IEnumerable<Pedido>> FiltrarPedidosAsync(DateTime? dataInicio, DateTime? dataFim, string nomeCliente)
+        public virtual async Task<IEnumerable<Pedido>> FiltrarPedidosAsync(DateTime? dataInicio, DateTime? dataFim, string nomeCliente)
         {
             return await _pedidoService.FiltrarPedidosAsync(dataInicio, dataFim, nomeCliente);
         }

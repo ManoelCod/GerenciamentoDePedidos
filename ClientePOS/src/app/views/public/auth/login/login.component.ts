@@ -22,7 +22,7 @@ export class LoginComponent implements OnInit {
     label: 'Email address',
     inputType: 'email',
     name: 'email',
-    value: 'agazinakou@gmail.com',
+    value: 'manoelcontato@gmail.com',
     col: 12,
     validations: [{
       name: 'required',
@@ -64,7 +64,7 @@ export class LoginComponent implements OnInit {
 
   private auth(formData){
     console.log(formData);
-    this.AuthenticationService.loginUser(formData.email, formData.password).then((res: any)=> {
+    this.AuthenticationService.loginUser('agazinakou@gmail.com', formData.password).then((res: any)=> {
       console.log('user', res);
       this.redirect();
     }, err=> {
