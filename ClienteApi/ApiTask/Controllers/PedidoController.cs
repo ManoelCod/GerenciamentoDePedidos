@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using ApiTask.DTOs;
+using ApiTask.MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagement.Application;
@@ -14,12 +16,14 @@ namespace ApiTask.Controllers
     [Route("api/[controller]")]
     public class OrderController : ControllerBase
     {
+        private readonly IMediator _mediator;
         private readonly PedidoApplication _pedidoApplication;
         private readonly IOrderService _orderService;
         private JsonSerializerOptions options;
 
-        public OrderController(PedidoApplication pedidoApplication, IOrderService orderService)
+        public OrderController(PedidoApplication pedidoApplication, IOrderService orderService, IMediator mediator)
         {
+            _mediator = mediator;
             _pedidoApplication = pedidoApplication;
             options = new JsonSerializerOptions
             {
@@ -41,36 +45,10 @@ namespace ApiTask.Controllers
                 return BadRequest("Pedido não pode ser nulo.");
             }
 
-            var pedido = new Pedido(
-                Guid.NewGuid(),
-                orderDTO.name,
-                DateTime.UtcNow
-            );
-
-            // Deserializar a string JSON `Carts` em uma lista de `ItemOrderDto`
-            var itemsDto = JsonSerializer.Deserialize<List<ItemOrderDto>>(orderDTO.Carts, options);
-
-            if (itemsDto == null || itemsDto.Count == 0)
-            {
-                return BadRequest("Items are null or empty");
-            }
-
-            foreach (var itemDto in itemsDto)
-            {
-                var item = new ItemPedido(
-                    Guid.NewGuid(), // Gerar novo Guid para o ItemPedido
-                    itemDto.Name,
-                    itemDto.Quantity,
-                    itemDto.Price
-                );
-                pedido.AdicionarItem(item);
-            }
-
-            // Processar o pedido aqui
-            await _pedidoApplication.CriarPedidoAsync(pedido);
-
-            return Ok(new { mensagem = "Pedido criado com sucesso!" });
+            var pedidoId = await _mediator.Send(new CriarPedidoCommand(orderDTO));
+            return Ok(new { mensagem = "Pedido criado com sucesso!", pedidoId });
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateOrderAsync(Guid id, [FromBody] OrderDTO orderDto)
@@ -79,38 +57,7 @@ namespace ApiTask.Controllers
             {
                 return BadRequest("Pedido não pode ser nulo e o ID deve coincidir.");
             }
-
-            var pedidoExistente = await _pedidoApplication.ObterPedidoPorIdAsync(id);
-            if (pedidoExistente == null)
-            {
-                return NotFound("Pedido não encontrado.");
-            }
-
-            pedidoExistente.NomeCliente = orderDto.name;
-            pedidoExistente.DataPedido = DateTime.UtcNow;
-
-            // Deserializar a string JSON `Carts` em uma lista de `ItemOrderDto`
-            var itemsDto = JsonSerializer.Deserialize<List<ItemOrderDto>>(orderDto.Carts, options);
-
-            if (itemsDto == null || itemsDto.Count == 0)
-            {
-                return BadRequest("Items are null or empty");
-            }
-
-            pedidoExistente.Itens.Clear();
-            foreach (var itemDto in itemsDto)
-            {
-                var item = new ItemPedido(
-                    Guid.NewGuid(), // Gerar novo Guid para o ItemPedido
-                    itemDto.Name,
-                    itemDto.Quantity,
-                    itemDto.Price
-                );
-                pedidoExistente.AdicionarItem(item);
-            }
-
-            await _pedidoApplication.AtualizarPedidoAsync(pedidoExistente);
-
+            await _mediator.Send(new UpdateOrderCommand(id, orderDto));
             return Ok(new { mensagem = "Pedido atualizado com sucesso!" });
         }
 

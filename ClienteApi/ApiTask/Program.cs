@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application;
 using TaskManagement.Application.Service;
@@ -18,7 +19,7 @@ builder.Services.AddScoped<IPedidoService,PedidoService>();
 builder.Services.AddScoped<PedidoApplication>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-
+builder.Services.AddMediatR(typeof(Program).Assembly);
 
 
 builder.Services.AddControllers();

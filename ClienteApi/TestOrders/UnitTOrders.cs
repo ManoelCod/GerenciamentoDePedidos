@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using ApiTask.Controllers;
 using ApiTask.DTOs;
+using ApiTask.MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using TaskManagement.Application;
@@ -19,6 +21,7 @@ namespace ApiTask.Tests
         private readonly Mock<IPedidoService> _mockPedidoService;
         private readonly Mock<PedidoApplication> _mockPedidoApplication;
         private readonly Mock<IOrderService> _mockOrderService;
+        private readonly Mock<IMediator> _mockMediator;
         private readonly OrderController _controller;
 
         public OrderControllerTests()
@@ -26,7 +29,8 @@ namespace ApiTask.Tests
             _mockPedidoService = new Mock<IPedidoService>(MockBehavior.Strict);
             _mockPedidoApplication = new Mock<PedidoApplication>(_mockPedidoService.Object); // Removido MockBehavior.Strict
             _mockOrderService = new Mock<IOrderService>(MockBehavior.Strict);
-            _controller = new OrderController(_mockPedidoApplication.Object, _mockOrderService.Object);
+            _mockMediator = new Mock<IMediator>(MockBehavior.Strict);
+            _controller = new OrderController(_mockPedidoApplication.Object, _mockOrderService.Object, _mockMediator.Object);
         }
 
         [Fact]
@@ -39,9 +43,11 @@ namespace ApiTask.Tests
                 Carts = "[{\"Name\":\"Hambúrguer clássico\",\"Quantity\":1,\"Price\":10.50},{\"Name\":\"Cheeseburger\",\"Quantity\":1,\"Price\":12.50}]"
             };
 
-            var pedido = new Pedido(Guid.NewGuid(), orderDto.name, DateTime.UtcNow);
+            var pedidoId = Guid.NewGuid();
 
-            _mockPedidoApplication.Setup(service => service.CriarPedidoAsync(It.IsAny<Pedido>())).Returns(Task.FromResult(pedido));
+            _mockMediator
+                .Setup(m => m.Send(It.IsAny<CriarPedidoCommand>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(pedidoId);
 
             // Act
             var result = await _controller.CreatePedidoAsync(orderDto);
@@ -49,6 +55,7 @@ namespace ApiTask.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(200, okResult.StatusCode);
+
             // Converter o valor da resposta para JsonElement
             var responseJson = JsonSerializer.Serialize(okResult.Value);
             var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
@@ -57,10 +64,8 @@ namespace ApiTask.Tests
             var mensagem = responseElement.GetProperty("mensagem").GetString();
             Assert.Equal("Pedido criado com sucesso!", mensagem);
 
-            _mockPedidoApplication.Verify(service => service.CriarPedidoAsync(It.IsAny<Pedido>()), Times.Once);
+            _mockMediator.Verify(m => m.Send(It.IsAny<CriarPedidoCommand>(), It.IsAny<CancellationToken>()), Times.Once);
         }
-
-
 
         [Fact]
         public async Task CreatePedidoAsync_RetornaBadRequest_QuandoPedidoEhNulo()
