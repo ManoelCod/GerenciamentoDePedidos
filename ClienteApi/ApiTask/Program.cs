@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TaskManagement.Application;
+using TaskManagement.Application.Pedidos.Commands;
+using TaskManagement.Application.Pedidos.Handlers;
 using TaskManagement.Application.Service;
 using TaskManagement.Application.Service.Interface;
 using TaskManagement.Application.Services;
@@ -20,6 +22,9 @@ builder.Services.AddScoped<PedidoApplication>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddMediatR(typeof(Program).Assembly);
+
+builder.Services.AddTransient<IRequestHandler<CriarPedidoCommand, Guid>, CriarPedidoHandler>();
+builder.Services.AddTransient<IRequestHandler<UpdateOrderCommand, Unit>, UpdateOrderHandler>();
 
 
 builder.Services.AddControllers();
