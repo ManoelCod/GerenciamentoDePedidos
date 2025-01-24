@@ -1,4 +1,10 @@
-﻿namespace ApiTask.DTOs
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace TaskManagement.Application.DTOs
 {
     public class ItemOrderDto
     {
@@ -13,5 +19,4 @@
         public DateTime UpdatedAt { get; set; }
 
     }
-
 }

@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using ApiTask.DTOs;
-using ApiTask.MediatR;
+using TaskManagement.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +8,9 @@ using TaskManagement.Application;
 using TaskManagement.Application.Service;
 using TaskManagement.Application.Service.Interface;
 using TaskManagement.Domain.Models;
+using TaskManagement.Application.Ultils;
+using TaskManagement.Application.Pedidos.Commands;
+using TaskManagement.Application.Pedidos.Queries;
 
 namespace ApiTask.Controllers
 {
@@ -57,10 +59,16 @@ namespace ApiTask.Controllers
             {
                 return BadRequest("Pedido não pode ser nulo e o ID deve coincidir.");
             }
+
+            var pedidoExistente = await _mediator.Send(new ObterPedidoPorIdQuery(id));
+            if (pedidoExistente == null)
+            {
+                return NotFound("Pedido não encontrado.");
+            }
+
             await _mediator.Send(new UpdateOrderCommand(id, orderDto));
             return Ok(new { mensagem = "Pedido atualizado com sucesso!" });
         }
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrderAsync(Guid id)
         {

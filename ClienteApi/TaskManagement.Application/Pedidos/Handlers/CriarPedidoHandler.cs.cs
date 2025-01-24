@@ -1,16 +1,20 @@
-﻿using ApiTask.DTOs;
-using MediatR;
-using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json.Serialization;
-using TaskManagement.Application;
-using TaskManagement.Application.Service.Interface;
+using System.Text.Json;
+using System.Threading.Tasks;
+using MediatR;
+using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Pedidos.Commands;
+using TaskManagement.Application.Ultils;
 
-namespace ApiTask.MediatR
+namespace TaskManagement.Application.Pedidos.Handlers
 {
-    public record CriarPedidoCommand(OrderDTO OrderDTO) : IRequest<Guid>;
     public class CriarPedidoHandler : IRequestHandler<CriarPedidoCommand, Guid>
     {
-       
+
         private readonly PedidoApplication _pedidoApplication;
         private readonly JsonSerializerOptions _options;
 
@@ -66,6 +70,4 @@ namespace ApiTask.MediatR
             return pedido.Id;
         }
     }
-
-
 }

@@ -1,14 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
-using System.Threading.Tasks;
 using ApiTask.Controllers;
-using ApiTask.DTOs;
-using ApiTask.MediatR;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using TaskManagement.Application;
+using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Pedidos.Commands;
+using TaskManagement.Application.Pedidos.Queries;
 using TaskManagement.Application.Service.Interface;
 using TaskManagement.Domain.Models;
 using Xunit;
@@ -85,14 +83,20 @@ namespace ApiTask.Tests
             // Arrange
             var orderDto = new OrderDTO
             {
-                Id = Guid.NewGuid().ToString(), 
+                Id = Guid.NewGuid().ToString(),
                 name = "Poliana",
                 Carts = "[{\"Name\":\"Hambúrguer clássico\",\"Quantity\":1,\"Price\":10.50},{\"Name\":\"Cheeseburger\",\"Quantity\":1,\"Price\":12.50}]"
             };
+
             var pedidoExistente = new Pedido(Guid.Parse(orderDto.Id), orderDto.name, DateTime.UtcNow);
 
-            _mockPedidoApplication.Setup(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>())).ReturnsAsync(pedidoExistente);
-            _mockPedidoApplication.Setup(service => service.AtualizarPedidoAsync(It.IsAny<Pedido>())).Returns(Task.CompletedTask);
+            _mockMediator
+                .Setup(m => m.Send(It.IsAny<ObterPedidoPorIdQuery>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(pedidoExistente);
+
+            _mockMediator
+                .Setup(m => m.Send(It.IsAny<UpdateOrderCommand>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Unit.Value);
 
             // Act
             var result = await _controller.UpdateOrderAsync(Guid.Parse(orderDto.Id), orderDto);
@@ -100,16 +104,13 @@ namespace ApiTask.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(200, okResult.StatusCode);
-            // Converter o valor da resposta para JsonElement
             var responseJson = JsonSerializer.Serialize(okResult.Value);
             var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
-
-            // Acessar a propriedade mensagem
             var mensagem = responseElement.GetProperty("mensagem").GetString();
             Assert.Equal("Pedido atualizado com sucesso!", mensagem);
 
-            _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
-            _mockPedidoApplication.Verify(service => service.AtualizarPedidoAsync(It.IsAny<Pedido>()), Times.Once);
+            _mockMediator.Verify(m => m.Send(It.IsAny<ObterPedidoPorIdQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockMediator.Verify(m => m.Send(It.IsAny<UpdateOrderCommand>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -118,22 +119,32 @@ namespace ApiTask.Tests
             // Arrange
             var orderDto = new OrderDTO
             {
-                Id = Guid.NewGuid().ToString(),
                 name = "Poliana",
                 Carts = "[{\"Name\":\"Hambúrguer clássico\",\"Quantity\":1,\"Price\":10.50},{\"Name\":\"Cheeseburger\",\"Quantity\":1,\"Price\":12.50}]"
             };
 
-            _mockPedidoApplication.Setup(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Pedido)null);
+            var pedidoId = Guid.NewGuid();
+
+            _mockMediator
+                .Setup(m => m.Send(It.IsAny<CriarPedidoCommand>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(pedidoId);
 
             // Act
-            var result = await _controller.UpdateOrderAsync(Guid.Parse(orderDto.Id), orderDto);
+            var result = await _controller.CreatePedidoAsync(orderDto);
 
             // Assert
-            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-            Assert.Equal(404, notFoundResult.StatusCode);
-            Assert.Equal("Pedido não encontrado.", notFoundResult.Value);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(200, okResult.StatusCode);
 
-            _mockPedidoApplication.Verify(service => service.ObterPedidoPorIdAsync(It.IsAny<Guid>()), Times.Once);
+            // Converter o valor da resposta para JsonElement
+            var responseJson = JsonSerializer.Serialize(okResult.Value);
+            var responseElement = JsonSerializer.Deserialize<JsonElement>(responseJson);
+
+            // Acessar a propriedade mensagem
+            var mensagem = responseElement.GetProperty("mensagem").GetString();
+            Assert.Equal("Pedido criado com sucesso!", mensagem);
+
+            _mockMediator.Verify(m => m.Send(It.IsAny<CriarPedidoCommand>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
